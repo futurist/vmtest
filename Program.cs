@@ -15,7 +15,8 @@ namespace vmtest
 
     class Program
     {
-
+        // below line allow access to Clipboard
+        [STAThreadAttribute]
         static void Main(string[] args)
         {
             // Make only one instance
@@ -29,8 +30,75 @@ namespace vmtest
             GC.KeepAlive(mutex);
 
             Console.WriteLine(getExePath());
+
+
+            HotKeyManager.RegisterHotKey(Keys.F12, KeyModifiers.Control);
+            HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(StartStopRec);
+
+
+            HotKeyManager.RegisterHotKey(Keys.F8, KeyModifiers.Control);
+            HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
+
+
             createTCP();
+
+
+
         }
+
+        static bool isRecording = false;
+
+        static void StartStopRec(object sender, HotKeyEventArgs e)
+        {
+            Console.WriteLine(isRecording);
+
+            isRecording = !isRecording;
+
+            runExe("log.key \"^0x7B\"", "fff.exe", (object sender2, System.EventArgs e2) =>
+            {
+                Console.WriteLine("finished");
+            });
+
+        }
+
+
+        static void MakeSnap(object sender, HotKeyEventArgs e)
+        {
+            runExe("-save $uniquenum$.png -exit -captureregselect", "MiniCap.exe", waitForSnap);
+        }
+
+        static void waitForSnap(object sender2, System.EventArgs e2)
+        {
+            Console.WriteLine("box finished");
+           
+        }
+
+        [STAThreadAttribute]
+        static void SaveClipImage(string name)
+        {
+            IDataObject data = Clipboard.GetDataObject();
+
+            if (data != null)
+            {
+                if (data.GetDataPresent(DataFormats.Bitmap))
+                {
+                    Image image = (Image)data.GetData(DataFormats.Bitmap, true);
+
+                    image.Save(name + ".png", System.Drawing.Imaging.ImageFormat.Png);
+
+                }
+                else
+                {
+                    MessageBox.Show("The Data In Clipboard is not as image format");
+                }
+            }
+            else
+            {
+                MessageBox.Show("The Clipboard was empty");
+            }
+
+        }
+
 
         static string shot()
         {
@@ -194,10 +262,6 @@ namespace vmtest
                             case "/play":
 
 
-                                var myProcess = new Process { StartInfo = new ProcessStartInfo("fff.exe") };
-                                myProcess.Start();
-                                myProcess.WaitForExit();
-
                                 break;
 
 
@@ -251,16 +315,6 @@ namespace vmtest
         static void exeCmd(string arg) {
 
             runExe(arg, "nircmd.exe", (object sender, System.EventArgs e) => { 
-                Console.WriteLine("finished");
-            });
-
-        }
-
-        static void exeRec(string arg, string exePath)
-        {
-
-            runExe(arg, "fff.exe", (object sender, System.EventArgs e) =>
-            {
                 Console.WriteLine("finished");
             });
 
