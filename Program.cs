@@ -32,12 +32,12 @@ namespace vmtest
             Console.WriteLine(getExePath());
 
 
-            HotKeyManager.RegisterHotKey(Keys.F12, KeyModifiers.Control);
-            HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(StartStopRec);
+            //HotKeyManager.RegisterHotKey(Keys.F12, KeyModifiers.Control);
+            //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(StartStopRec);
 
 
-            HotKeyManager.RegisterHotKey(Keys.F8, KeyModifiers.Control);
-            HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
+            //HotKeyManager.RegisterHotKey(Keys.F8, KeyModifiers.Control);
+            //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
 
             createTCP();
