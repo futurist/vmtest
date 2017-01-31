@@ -194,6 +194,9 @@ namespace vmtest
                             case "/play":
 
 
+                                var myProcess = new Process { StartInfo = new ProcessStartInfo("fff.exe") };
+                                myProcess.Start();
+                                myProcess.WaitForExit();
 
                                 break;
 
@@ -245,23 +248,50 @@ namespace vmtest
             return version;
         }
 
-        static void exeCmd(string arg)
+        static void exeCmd(string arg) {
+
+            runExe(arg, "nircmd.exe", (object sender, System.EventArgs e) => { 
+                Console.WriteLine("finished");
+            });
+
+        }
+
+        static void exeRec(string arg, string exePath)
+        {
+
+            runExe(arg, "fff.exe", (object sender, System.EventArgs e) =>
+            {
+                Console.WriteLine("finished");
+            });
+
+        }
+
+
+        static Process runExe(string arg, string exePath, Action<object, EventArgs> onExit)
         {
             string path = Directory.GetCurrentDirectory();
             DirectoryInfo d = new DirectoryInfo(path);
+
+            Process myProcess = new Process();
 
             ProcessStartInfo startInfo = new ProcessStartInfo();
 
             startInfo.CreateNoWindow = false;
             startInfo.UseShellExecute = true;
-            startInfo.FileName = "nircmd.exe";
+            startInfo.FileName = exePath;
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             startInfo.WorkingDirectory = d.FullName;
             startInfo.Arguments = arg;
 
-            Process.Start(startInfo);
+            myProcess.StartInfo = startInfo;
+            if (onExit != null)
+            {
+                myProcess.EnableRaisingEvents = true;
+                myProcess.Exited += new EventHandler(onExit);
+            }
+            myProcess.Start();
 
-            return;
+            return myProcess;
         }
 
     }
