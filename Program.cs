@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Web;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Timers;
 
 namespace vmtest
 {
@@ -39,11 +40,40 @@ namespace vmtest
             //HotKeyManager.RegisterHotKey(Keys.F8, KeyModifiers.Control);
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
+            setupCheckLoop();
+
+            compareImages("test\\data\\", "aa.png");
 
             createTCP();
 
 
 
+        }
+
+
+        static void compareImages(string remotePath, string filename)
+        {
+            Directory.CreateDirectory("compare");
+            StringBuilder output = new StringBuilder();
+            string args = "-metric MAE " + remotePath + filename + " data\\" + filename + " compare\\" + filename;
+            runExe(args, "compare.exe", (object sender2, System.EventArgs e2) =>
+            {
+                Console.WriteLine(output.ToString());
+            }, output);
+        }
+
+        static System.Timers.Timer timer = null;
+        static void setupCheckLoop()
+        {
+            timer = new System.Timers.Timer();
+            timer.Interval = 200;
+            timer.Elapsed += TimerEventProcessor;
+            timer.Start();
+        }
+
+        static void TimerEventProcessor(object sender, ElapsedEventArgs e)
+        {
+            
         }
 
         static bool isRecording = false;
@@ -57,20 +87,20 @@ namespace vmtest
             runExe("log.key \"^0x7B\"", "fff.exe", (object sender2, System.EventArgs e2) =>
             {
                 Console.WriteLine("finished");
-            });
+            }, null);
 
         }
 
 
         static void MakeSnap(object sender, HotKeyEventArgs e)
         {
-            runExe("-save $uniquenum$.png -exit -captureregselect", "MiniCap.exe", waitForSnap);
+            runExe("-save $uniquenum$.png -exit -captureregselect", "MiniCap.exe", waitForSnap, null);
         }
 
         static void waitForSnap(object sender2, System.EventArgs e2)
         {
             Console.WriteLine("box finished");
-           
+
         }
 
         [STAThreadAttribute]
@@ -149,7 +179,7 @@ namespace vmtest
                 bool isExit = false;
 
                 // Enter the listening loop.
-                while (! isExit)
+                while (!isExit)
                 {
                     Console.Write("Waiting for a connection... ");
 
@@ -172,7 +202,7 @@ namespace vmtest
                         data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
                         var url = data.Split(' ')[1];
                         //url = HttpUtility.UrlDecode(url).Substring(1);
-                        var urlObj = new Uri("http://localhost"+url);
+                        var urlObj = new Uri("http://localhost" + url);
                         var query = HttpUtility.ParseQueryString(urlObj.Query);
                         Console.WriteLine("Received: {0}---{1}", url, urlObj.AbsolutePath);
 
@@ -301,7 +331,8 @@ namespace vmtest
         }
 
 
-        static string getExePath() { 
+        static string getExePath()
+        {
             System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
             return assembly.Location;
         }
@@ -312,16 +343,18 @@ namespace vmtest
             return version;
         }
 
-        static void exeCmd(string arg) {
+        static void exeCmd(string arg)
+        {
 
-            runExe(arg, "nircmd.exe", (object sender, System.EventArgs e) => { 
+            runExe(arg, "nircmd.exe", (object sender, System.EventArgs e) =>
+            {
                 Console.WriteLine("finished");
-            });
+            }, null);
 
         }
 
 
-        static Process runExe(string arg, string exePath, Action<object, EventArgs> onExit)
+        static Process runExe(string arg, string exePath, Action<object, EventArgs> onExit, StringBuilder outputBuilder)
         {
             string path = Directory.GetCurrentDirectory();
             DirectoryInfo d = new DirectoryInfo(path);
@@ -334,16 +367,35 @@ namespace vmtest
             startInfo.UseShellExecute = true;
             startInfo.FileName = exePath;
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            startInfo.WorkingDirectory = d.FullName;
+            // startInfo.WorkingDirectory = d.FullName;
             startInfo.Arguments = arg;
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            startInfo.CreateNoWindow = true;
 
-            myProcess.StartInfo = startInfo;
+            if (outputBuilder != null)
+            {
+                startInfo.UseShellExecute = false;
+                startInfo.RedirectStandardError = true;
+                startInfo.RedirectStandardOutput = true;
+                myProcess.OutputDataReceived += (sender, eventArgs) => outputBuilder.AppendLine(eventArgs.Data);
+                myProcess.ErrorDataReceived += (sender, eventArgs) => outputBuilder.AppendLine(eventArgs.Data);
+            }
+
+
             if (onExit != null)
             {
                 myProcess.EnableRaisingEvents = true;
                 myProcess.Exited += new EventHandler(onExit);
             }
+
+            myProcess.StartInfo = startInfo;
             myProcess.Start();
+
+            if (outputBuilder != null)
+            {
+                myProcess.BeginOutputReadLine();
+                myProcess.BeginErrorReadLine();
+            }
 
             return myProcess;
         }
