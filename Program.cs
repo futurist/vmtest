@@ -105,9 +105,12 @@ namespace vmtest
 
             replayProcess = runExe("log.key", "ppp", (s, e) =>
             {
-                MessageBox.Show(replayProcess.ExitCode.ToString());
+                string exitStr = "replay exit code: " + replayProcess.ExitCode.ToString();
                 replayProcess = null;
                 stopCompare();
+
+                MessageBox.Show(exitStr);
+
             }, null);
 
         }
