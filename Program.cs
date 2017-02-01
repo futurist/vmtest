@@ -18,7 +18,7 @@ namespace vmtest
     class Program
     {
         // below line allow access to Clipboard
-        [STAThreadAttribute]
+        [STAThread]
         static void Main(string[] args)
         {
             // Make only one instance
@@ -41,15 +41,12 @@ namespace vmtest
             //HotKeyManager.RegisterHotKey(Keys.F8, KeyModifiers.Control);
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
-
+            Application.ApplicationExit += new EventHandler(OnApplicationExit);
 
 
             remotePath = "test\\";
 
-            //setupcheckloop();
-
-            compareFolder();
-
+            startReplay();
 
             createTCP();
 
@@ -57,13 +54,63 @@ namespace vmtest
 
         }
 
+        static void OnApplicationExit(object sender, EventArgs e)
+        {
+            stopCompare();
+        }
+
+        static string logFile = "vmtest.log";
+        static void log(string str)
+        {
+            File.AppendAllText(logFile, str + "\n");
+        }
+
+        static string remotePath = null;
+        static Process compareProcess = null;
+        static Process replayProcess = null;
         static IEnumerable<string> remoteFiles = null;
         static IEnumerable<string> localFiles = null;
         static IEnumerable<string> compareFiles = null;
         static StringBuilder lastCompareOutput = null;
-        static Process compareProcess = null;
-        static string remotePath = null;
         static System.Timers.Timer compareTimer = null;
+
+        static void startReplay()
+        {
+            if (Directory.Exists("data"))
+            {
+                Directory.Delete("data", true);
+                // return;
+            }
+            if (Directory.Exists("compared"))
+            {
+                Directory.Delete("compared", true);
+                // return;
+            }
+            Directory.CreateDirectory("data");
+            Directory.CreateDirectory("compared");
+
+            // copy all coords files into data
+            string sourcePath = remotePath + "data\\";
+            string targetPath = "data\\";
+
+            foreach (var sourceFilePath in Directory.GetFiles(sourcePath, "*.txt"))
+            {
+                string fileName = Path.GetFileName(sourceFilePath);
+                string destinationFilePath = Path.Combine(targetPath, fileName);
+
+                System.IO.File.Copy(sourceFilePath, destinationFilePath, true);
+            }
+
+            startCompare();
+
+            replayProcess = runExe("log.key", "ppp", (s, e) =>
+            {
+                MessageBox.Show(replayProcess.ExitCode.ToString());
+                replayProcess = null;
+                stopCompare();
+            }, null);
+
+        }
 
         static void compareFolder()
         {
@@ -75,11 +122,12 @@ namespace vmtest
 
             IEnumerable<string> list3 = localFiles.Except(compareFiles).OrderBy(v => v);
 
-            Console.WriteLine("The following files are in data\\ but not compare\\:");
+            //Console.WriteLine("The following files are in data\\ but not compare\\:");
 
             foreach (var v in list3)
             {
                 Console.WriteLine(v);
+                log("compare " + v);
                 compareImages(v);
                 break;
             }
@@ -94,20 +142,41 @@ namespace vmtest
             string args = "-metric MAE \"" + remotePath + "data\\" + filename + "\" \"data\\" + filename + "\" \"compared\\" + filename + "\"";
 
             Console.WriteLine(args);
+            log(args);
+
             compareProcess = runExe(args, "compare.exe", (sender2, e2) =>
             {
+                log(lastCompareOutput.ToString());
                 if (!lastCompareOutput.ToString().Contains("0 (0)"))
                 {
                     Console.WriteLine(lastCompareOutput.ToString());
+                    log(lastCompareOutput.ToString());
+
+                    stopCompare();
                 }
                 compareProcess = null;
             }, lastCompareOutput);
         }
 
-        static void setupCheckLoop()
+
+        static void stopCompare()
+        {
+
+            if (compareTimer != null)
+            {
+                compareTimer.Stop();
+                compareTimer.Enabled = false;
+                compareTimer = null;
+            }
+            if (replayProcess != null)
+            {
+                replayProcess.Kill();
+            }
+        }
+        static void startCompare()
         {
             compareTimer = new System.Timers.Timer();
-            compareTimer.Interval = 200;
+            compareTimer.Interval = 1000;
             compareTimer.Elapsed += TimerEventProcessor;
             compareTimer.Start();
         }
@@ -133,17 +202,6 @@ namespace vmtest
 
         }
 
-
-        static void MakeSnap(object sender, HotKeyEventArgs e)
-        {
-            runExe("-save $uniquenum$.png -exit -captureregselect", "MiniCap.exe", waitForSnap, null);
-        }
-
-        static void waitForSnap(object sender2, System.EventArgs e2)
-        {
-            Console.WriteLine("box finished");
-
-        }
 
         [STAThreadAttribute]
         static void SaveClipImage(string name)
@@ -293,7 +351,7 @@ namespace vmtest
                                             proc_filename = theprocess.MainModule.FileName;
                                             cpu_time = new DateTime(theprocess.TotalProcessorTime.Ticks).ToString("HH:mm:ss");
                                         }
-                                        catch (Exception err)
+                                        catch (Exception)
                                         {
 
                                         }
