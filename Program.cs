@@ -10,6 +10,7 @@ using System.Web;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Timers;
+using System.Linq;
 
 namespace vmtest
 {
@@ -40,9 +41,15 @@ namespace vmtest
             //HotKeyManager.RegisterHotKey(Keys.F8, KeyModifiers.Control);
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
-            setupCheckLoop();
 
-            compareImages("test\\data\\", "aa.png");
+
+
+            remotePath = "test\\";
+
+            //setupcheckloop();
+
+            compareFolder();
+
 
             createTCP();
 
@@ -50,30 +57,65 @@ namespace vmtest
 
         }
 
+        static IEnumerable<string> remoteFiles = null;
+        static IEnumerable<string> localFiles = null;
+        static IEnumerable<string> compareFiles = null;
+        static StringBuilder lastCompareOutput = null;
+        static Process compareProcess = null;
+        static string remotePath = null;
+        static System.Timers.Timer compareTimer = null;
 
-        static void compareImages(string remotePath, string filename)
+        static void compareFolder()
         {
-            Directory.CreateDirectory("compare");
-            StringBuilder output = new StringBuilder();
-            string args = "-metric MAE " + remotePath + filename + " data\\" + filename + " compare\\" + filename;
-            runExe(args, "compare.exe", (object sender2, System.EventArgs e2) =>
+            if (remotePath == null) return;
+
+            remoteFiles = new System.IO.DirectoryInfo(remotePath + "data\\").GetFiles("*.png").Select(fi => fi.Name);
+            localFiles = new System.IO.DirectoryInfo("data\\").GetFiles("*.png").Select(fi => fi.Name);
+            compareFiles = new System.IO.DirectoryInfo("compared\\").GetFiles("*.png").Select(fi => fi.Name);
+
+            IEnumerable<string> list3 = localFiles.Except(compareFiles).OrderBy(v => v);
+
+            Console.WriteLine("The following files are in data\\ but not compare\\:");
+
+            foreach (var v in list3)
             {
-                Console.WriteLine(output.ToString());
-            }, output);
+                Console.WriteLine(v);
+                compareImages(v);
+                break;
+            }
+
         }
 
-        static System.Timers.Timer timer = null;
+
+        static void compareImages(string filename)
+        {
+            Directory.CreateDirectory("compared");
+            lastCompareOutput = new StringBuilder();
+            string args = "-metric MAE \"" + remotePath + "data\\" + filename + "\" \"data\\" + filename + "\" \"compared\\" + filename + "\"";
+
+            Console.WriteLine(args);
+            compareProcess = runExe(args, "compare.exe", (sender2, e2) =>
+            {
+                if (!lastCompareOutput.ToString().Contains("0 (0)"))
+                {
+                    Console.WriteLine(lastCompareOutput.ToString());
+                }
+                compareProcess = null;
+            }, lastCompareOutput);
+        }
+
         static void setupCheckLoop()
         {
-            timer = new System.Timers.Timer();
-            timer.Interval = 200;
-            timer.Elapsed += TimerEventProcessor;
-            timer.Start();
+            compareTimer = new System.Timers.Timer();
+            compareTimer.Interval = 200;
+            compareTimer.Elapsed += TimerEventProcessor;
+            compareTimer.Start();
         }
 
         static void TimerEventProcessor(object sender, ElapsedEventArgs e)
         {
-            
+            if (compareProcess == null) compareFolder();
+            else Console.WriteLine("already in compare!!");
         }
 
         static bool isRecording = false;
