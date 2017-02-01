@@ -44,14 +44,25 @@ namespace vmtest
             Application.ApplicationExit += new EventHandler(OnApplicationExit);
 
 
-            remotePath = "test\\";
-
-            startReplay();
-
             createTCP();
 
 
 
+        }
+
+        static string PathAddBackslash(string path)
+        {
+            string separator1 = Path.DirectorySeparatorChar.ToString();
+            string separator2 = Path.AltDirectorySeparatorChar.ToString();
+
+            path = path.TrimEnd();
+
+            if (path.EndsWith(separator1) || path.EndsWith(separator2))
+                return path;
+
+            if (path.Contains(separator2))
+                return path + separator2;
+            return path + separator1;
         }
 
         static void OnApplicationExit(object sender, EventArgs e)
@@ -73,6 +84,19 @@ namespace vmtest
         static IEnumerable<string> compareFiles = null;
         static StringBuilder lastCompareOutput = null;
         static System.Timers.Timer compareTimer = null;
+
+        static string replayExitCode = null;
+
+        static string getReplayStatus()
+        {
+            string ret = "";
+
+            ret += "running status:" + (replayProcess == null ? "0" : "1") + "<br>";
+
+            ret += "last result:" + (replayExitCode == null ? "unknown" : replayExitCode) + "<br>";
+
+            return ret;
+        }
 
         static void startReplay()
         {
@@ -103,15 +127,18 @@ namespace vmtest
 
             startCompare();
 
+            StringBuilder output = new StringBuilder();
+
             replayProcess = runExe("log.key", "ppp", (s, e) =>
             {
-                string exitStr = "replay exit code: " + replayProcess.ExitCode.ToString();
+                replayExitCode = replayProcess.ExitCode.ToString();
+                string exitStr = "replay exit code: " + replayExitCode;
                 replayProcess = null;
                 stopCompare();
 
-                MessageBox.Show(exitStr);
+                // MessageBox.Show(output + exitStr);
 
-            }, null);
+            }, output);
 
         }
 
@@ -174,6 +201,9 @@ namespace vmtest
             if (replayProcess != null)
             {
                 replayProcess.Kill();
+
+                // run again to terminate
+                //runExe("", "ppp", null, null);
             }
         }
         static void startCompare()
@@ -367,6 +397,21 @@ namespace vmtest
                                 break;
                             case "/play":
 
+                                if (!string.IsNullOrEmpty(query["test"]))
+                                {
+                                    remotePath = PathAddBackslash(query["test"]);
+                                    if (replayProcess == null)
+                                    {
+                                        startReplay();
+                                    }
+
+                                    ret += "test path: " + remotePath + "<br>";
+                                    ret += getReplayStatus();
+                                }
+                                else if (!string.IsNullOrEmpty(query["status"]))
+                                {
+                                    ret += getReplayStatus();
+                                }
 
                                 break;
 
