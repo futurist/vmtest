@@ -206,33 +206,6 @@ namespace vmtest
         }
 
 
-        [STAThreadAttribute]
-        static void SaveClipImage(string name)
-        {
-            IDataObject data = Clipboard.GetDataObject();
-
-            if (data != null)
-            {
-                if (data.GetDataPresent(DataFormats.Bitmap))
-                {
-                    Image image = (Image)data.GetData(DataFormats.Bitmap, true);
-
-                    image.Save(name + ".png", System.Drawing.Imaging.ImageFormat.Png);
-
-                }
-                else
-                {
-                    MessageBox.Show("The Data In Clipboard is not as image format");
-                }
-            }
-            else
-            {
-                MessageBox.Show("The Clipboard was empty");
-            }
-
-        }
-
-
         static string shot()
         {
             Rectangle bounds = Screen.GetBounds(Point.Empty);
