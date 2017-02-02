@@ -35,7 +35,10 @@ namespace vmtest
 
             Application.UseWaitCursor = false;
 
-            if (File.Exists("mongoose.exe"))
+
+            var httpserver = "mongoose.exe";
+
+            if (File.Exists(httpserver) && Process.GetProcessesByName(httpserver).Length==0 )
             {
                 runExe("-listening_port "+ (port+100).ToString() +" -start_browser no", "mongoose.exe", null, null);
             }
@@ -79,9 +82,10 @@ namespace vmtest
         static string logFile = "vmtest.log";
         static void log(string str)
         {
-            File.AppendAllText(logFile, str + "\n");
+            if (DEBUG) File.AppendAllText(logFile, str + "\n");
         }
 
+        static bool DEBUG = false;
         static Int32 port = 22300;
         static string remotePath = null;
         static Process compareProcess = null;
