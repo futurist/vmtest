@@ -35,6 +35,11 @@ namespace vmtest
 
             Application.UseWaitCursor = false;
 
+            if (File.Exists("mongoose.exe"))
+            {
+                runExe("-listening_port "+ (port+100).ToString() +" -start_browser no", "mongoose.exe", null, null);
+            }
+
             //HotKeyManager.RegisterHotKey(Keys.F12, KeyModifiers.Control);
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(StartStopRec);
 
@@ -77,6 +82,7 @@ namespace vmtest
             File.AppendAllText(logFile, str + "\n");
         }
 
+        static Int32 port = 22300;
         static string remotePath = null;
         static Process compareProcess = null;
         static Process replayProcess = null;
@@ -303,7 +309,7 @@ namespace vmtest
             try
             {
                 // Set the TcpListener port.
-                Int32 port = 22300;
+
                 IPAddress localAddr = IPAddress.Parse("127.0.0.1");
 
                 // TcpListener server = new TcpListener(port);
@@ -473,6 +479,30 @@ namespace vmtest
 
                                 break;
 
+                            case "/dir":
+
+                                contentType = "application/json";
+
+                                string curDir = Directory.GetCurrentDirectory();
+                                if (!string.IsNullOrEmpty(query["dir"]))
+                                {
+                                    curDir = query["dir"];
+                                }
+
+                                var dirs = Directory.GetDirectories(curDir);
+
+                                string[] excludeDirs = { }; //{ "compared", "data" };
+
+                                ret += "[";
+                                foreach (string name in dirs)
+                                {
+                                    string folder = name.Split(Path.DirectorySeparatorChar).Last().ToString();
+                                    if (excludeDirs.Contains(folder)) continue;
+                                    ret += "\"" + folder + "\",";
+                                }
+                                ret = ret.TrimEnd(',');
+                                ret += "]";
+                                break;
 
                         }
                         // Process the data sent by the client.

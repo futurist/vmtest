@@ -10,6 +10,7 @@
     <div>
       <span>IP:</span>
       <input type="text" id="ip" value="http://192.168.128.129" style="width:150px">
+      <!-- <input type="text" id="ip" value="http://192.168.1.98" style="width:150px"> -->
       <input type="number" id="port" value="22300" style="width:50px;">
       <button id="exit" onclick="exitServer()">exit</button>
     </div>
@@ -18,8 +19,14 @@
       <div>running: <span id="running"></span></div>
       <div>last_code: <span id="last_code"></span></div>
       <div style="margin-top:20px">
-        <button id="action">start</button><span id="start_result"></span>
+        <input id="test_name" style="width: 100px">
+        <button id="action">start</button>
+        <label>reboot?<input type="checkbox" id="reboot" checked="checked"></label>
+
+        <span id="start_result"></span>
       </div>
+      <ul id="dir_list">
+      </ul>
     </div>
     <div style="position:absolute;top:0;left:0;display:none;" id="shot" onclick="this.style.display='none';"></div>
     <script type="text/javascript" src="index.js"></script>

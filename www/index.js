@@ -1,7 +1,7 @@
 var inter1
 
-function host () {
-  return ip.value + ':' + port.value
+function host (isHttp) {
+  return ip.value + ':' + (isHttp ? port.value+100 : port.value)
 }
 
 function getStatus () {
@@ -16,16 +16,22 @@ function getStatus () {
       clearTimeout(inter1)
       inter1 = setTimeout(getStatus, 1000)
       if (response.ok) {
+        if (pendingTest) {
+          pendingTest = false
+          action.disabled = false
+          _startPlay()
+        }
         return response.json()
       } else {
         throw new Error('Network response was not ok.')
       }
     })
-    .catch(function() {
+    .catch(function () {
       clearTimeout(inter1)
       inter1 = setTimeout(getStatus, 1000)
     })
     .then(function (data) {
+      if (!data) return
       running.innerHTML = data.running
       last_code.innerHTML = data.last_code == null ? 'n/a' : data.last_code
       if (data.running) {
@@ -41,8 +47,24 @@ function getStatus () {
 
 getStatus()
 
-function startPlay () {
-  fetch(host() + '/play?test=test')
+var pendingTest = false
+function startPlay (isNow) {
+  if (!test_name.value) return alert('select test first')
+  if (reboot.checked) {
+    pendingTest = true
+    clearTimeout(inter1)
+    inter1 = setTimeout(getStatus, 10000)
+    action.disabled = true
+    sendCmd('exitwin reboot')
+  } else {
+    _startPlay()
+  }
+}
+
+function _startPlay () {
+  var test = test_name.value
+  if (!test) return
+  fetch(host() + '/play?test=' + test)
     .then(fetchAction('json'))
     .then(function (data) {
       start_result.innerHTML = data.message
@@ -58,6 +80,30 @@ function exitServer () {
   fetch(host() + '/?exit=1')
     .then(fetchAction('text'))
 }
+
+function sendCmd (cmd) {
+  fetch(host() + '/?cmd=' + encodeURIComponent(cmd))
+    .then(fetchAction('text'))
+}
+
+function getDirList () {
+  fetch(host() + '/dir')
+    .then(fetchAction('json'))
+    .then(function (data) {
+      dir_list.innerHTML = data.map(function (v) {
+        return '<li><span onclick=setTestName(this)>' +
+          v + '</span> <a target=_blank href="' + host(true) + v + '">view</a></li>'
+      }).join('')
+    })
+}
+function setTestName (el) {
+  var name = typeof el === 'string' ? el : el.innerHTML
+  if (['data', 'compared'].indexOf(name) > -1) {
+    return alert('cannot select data & compared')
+  }
+  test_name.value = name
+}
+getDirList()
 
 function getShot () {
   fetch(host() + '/?snap=2')
