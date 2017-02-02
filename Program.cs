@@ -129,14 +129,15 @@ namespace vmtest
 
             StringBuilder output = new StringBuilder();
 
-            replayProcess = runExe("log.key", "ppp", (s, e) =>
+
+            replayProcess = runExe(sourcePath + "log.key", "ppp", (s, e) =>
             {
                 replayExitCode = replayProcess.ExitCode.ToString();
                 string exitStr = "replay exit code: " + replayExitCode;
                 replayProcess = null;
                 stopCompare();
 
-                // MessageBox.Show(output + exitStr);
+                //MessageBox.Show(output + exitStr);
 
             }, output);
 
@@ -183,6 +184,9 @@ namespace vmtest
                     log(lastCompareOutput.ToString());
 
                     stopCompare();
+
+                    MessageBox.Show("test error: "+ remotePath);
+
                 }
                 compareProcess = null;
             }, lastCompareOutput);
@@ -200,10 +204,11 @@ namespace vmtest
             }
             if (replayProcess != null)
             {
-                replayProcess.Kill();
+                //replayProcess.Kill();
 
                 // run again to terminate
-                //runExe("", "ppp", null, null);
+                runExe("", "ppp", null, null);
+
             }
         }
         static void startCompare()
