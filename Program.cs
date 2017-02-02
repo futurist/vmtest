@@ -33,6 +33,7 @@ namespace vmtest
 
             Console.WriteLine(getExePath());
 
+            Application.UseWaitCursor = false;
 
             //HotKeyManager.RegisterHotKey(Keys.F12, KeyModifiers.Control);
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(StartStopRec);
@@ -98,11 +99,25 @@ namespace vmtest
             return ret;
         }
 
-        static void startReplay()
+        static string startReplay()
         {
-            if (Directory.Exists("data"))
+            // copy all coords files into data
+            string sourcePath = remotePath + "data\\";
+            string targetPath = "data\\";
+
+
+
+            if (!Directory.Exists(sourcePath))
             {
-                Directory.Delete("data", true);
+                return "test data not exits: " + sourcePath;
+            }
+            if (Directory.Exists(targetPath))
+            {
+                if (File.Exists(Path.Combine(targetPath, "log.key")))
+                {
+                    return "data folder have log.key, move data folder to other place first!";
+                }
+                Directory.Delete(targetPath, true);
                 // return;
             }
             if (Directory.Exists("compared"))
@@ -110,12 +125,9 @@ namespace vmtest
                 Directory.Delete("compared", true);
                 // return;
             }
-            Directory.CreateDirectory("data");
+            Directory.CreateDirectory(targetPath);
             Directory.CreateDirectory("compared");
 
-            // copy all coords files into data
-            string sourcePath = remotePath + "data\\";
-            string targetPath = "data\\";
 
             foreach (var sourceFilePath in Directory.GetFiles(sourcePath, "*.txt"))
             {
@@ -140,6 +152,8 @@ namespace vmtest
                 //MessageBox.Show(output + exitStr);
 
             }, output);
+
+            return null;
 
         }
 
@@ -185,7 +199,7 @@ namespace vmtest
 
                     stopCompare();
 
-                    MessageBox.Show("test error: "+ remotePath);
+                    MessageBox.Show("test error: " + remotePath);
 
                 }
                 compareProcess = null;
@@ -243,12 +257,18 @@ namespace vmtest
 
         static string shot()
         {
+            
+            Cursor curSor = Cursor.Current;
+
             Rectangle bounds = Screen.GetBounds(Point.Empty);
             Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
 
             using (Graphics g = Graphics.FromImage(bitmap))
             {
                 g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+
+                Rectangle cursorBounds = new Rectangle(Cursor.Position, curSor.Size);
+                Cursors.Default.Draw(g, cursorBounds);
             }
 
 
@@ -404,14 +424,25 @@ namespace vmtest
 
                                 if (!string.IsNullOrEmpty(query["test"]))
                                 {
-                                    remotePath = PathAddBackslash(query["test"]);
                                     if (replayProcess == null)
                                     {
-                                        startReplay();
+                                        remotePath = PathAddBackslash(query["test"]);
+                                        string startResult = startReplay();
+                                        if (null != startResult)
+                                        {
+                                            ret += "error test: " + startResult;
+                                        }
+                                        else
+                                        {
+                                            ret += "test path: " + remotePath + "<br>";
+                                            ret += getReplayStatus();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ret += "test already in process: " + remotePath;
                                     }
 
-                                    ret += "test path: " + remotePath + "<br>";
-                                    ret += getReplayStatus();
                                 }
                                 else if (!string.IsNullOrEmpty(query["status"]))
                                 {
