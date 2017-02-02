@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <title>vmtest controller</title>
+  </head>
+
+  <body style="margin:20px;">
+    <div>
+      <span>IP:</span>
+      <input type="text" id="ip" value="http://192.168.128.129" style="width:150px">
+      <input type="number" id="port" value="22300" style="width:50px;">
+      <button id="exit" onclick="exitServer()">exit</button>
+    </div>
+    <div style="margin-top:20px;">
+      <div><button id="refresh" onclick="getStatus()">refresh</button><button id="refresh" onclick="getShot()">shot</button></div>
+      <div>running: <span id="running"></span></div>
+      <div>last_code: <span id="last_code"></span></div>
+      <div style="margin-top:20px">
+        <button id="action">start</button><span id="start_result"></span>
+      </div>
+    </div>
+    <div style="position:absolute;top:0;left:0;display:none;" id="shot" onclick="this.style.display='none';"></div>
+    <script type="text/javascript" src="index.js"></script>
+  </body>
+
+</html>

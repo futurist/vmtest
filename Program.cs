@@ -68,7 +68,7 @@ namespace vmtest
 
         static void OnApplicationExit(object sender, EventArgs e)
         {
-            stopCompare();
+            stopCompare(false);
         }
 
         static string logFile = "vmtest.log";
@@ -92,9 +92,13 @@ namespace vmtest
         {
             string ret = "";
 
-            ret += "running status:" + (replayProcess == null ? "0" : "1") + "<br>";
+            //ret += "running status:" + (replayProcess == null ? "0" : "1") + "<br>";
 
-            ret += "last result:" + (replayExitCode == null ? "unknown" : replayExitCode) + "<br>";
+            //ret += "last result:" + (replayExitCode == null ? "NULL" : replayExitCode) + "<br>";
+
+            ret += string.Format("{{\"running\": {0}, \"last_code\": {1}}}"
+                , (replayProcess == null ? "0" : "1")
+                , (replayExitCode == null ? "null" : replayExitCode));
 
             return ret;
         }
@@ -109,13 +113,13 @@ namespace vmtest
 
             if (!Directory.Exists(sourcePath))
             {
-                return "test data not exits: " + sourcePath;
+                return "{\"code\":1, \"message\": \"ERR_NO_TEST_DATA\"}";
             }
             if (Directory.Exists(targetPath))
             {
                 if (File.Exists(Path.Combine(targetPath, "log.key")))
                 {
-                    return "data folder have log.key, move data folder to other place first!";
+                    return "{\"code\":2, \"message\": \"ERR_HAVE_LOG_KEY\"}";
                 }
                 Directory.Delete(targetPath, true);
                 // return;
@@ -147,7 +151,7 @@ namespace vmtest
                 replayExitCode = replayProcess.ExitCode.ToString();
                 string exitStr = "replay exit code: " + replayExitCode;
                 replayProcess = null;
-                stopCompare();
+                stopCompare(false);
 
                 //MessageBox.Show(output + exitStr);
 
@@ -197,7 +201,7 @@ namespace vmtest
                     Console.WriteLine(lastCompareOutput.ToString());
                     log(lastCompareOutput.ToString());
 
-                    stopCompare();
+                    stopCompare(false);
 
                     MessageBox.Show("test error: " + remotePath);
 
@@ -207,7 +211,7 @@ namespace vmtest
         }
 
 
-        static void stopCompare()
+        static void stopCompare(bool force)
         {
 
             if (compareTimer != null)
@@ -218,10 +222,15 @@ namespace vmtest
             }
             if (replayProcess != null)
             {
-                //replayProcess.Kill();
-
-                // run again to terminate
-                runExe("", "ppp", null, null);
+                if (force)
+                {
+                    replayProcess.Kill();
+                }
+                else
+                {
+                    // run again to terminate
+                    runExe("", "ppp", null, null);
+                }
 
             }
         }
@@ -257,7 +266,7 @@ namespace vmtest
 
         static string shot()
         {
-            
+
             Cursor curSor = Cursor.Current;
 
             Rectangle bounds = Screen.GetBounds(Point.Empty);
@@ -338,6 +347,7 @@ namespace vmtest
                         Console.WriteLine("Received: {0}---{1}", url, urlObj.AbsolutePath);
 
                         var ret = "";
+                        var contentType = "text/html";
 
                         switch (urlObj.AbsolutePath)
                         {
@@ -364,7 +374,7 @@ namespace vmtest
                                 if (query["snap"] == "2")
                                 {
 
-                                    ret = "<style>*{margin:0;padding:0;}</style><img src=\"data:image/png;base64," + shot() + "\">";
+                                    ret = "<style>body {margin:0;padding:0;}</style><img src=\"data:image/png;base64," + shot() + "\">";
                                 }
 
 
@@ -387,7 +397,7 @@ namespace vmtest
 
                                         }
 
-                                        ret += String.Format("<tr><td>{0}</td><td>{1}&nbsp;&nbsp;</td><td>{2:n0} KB</td><td>{3}&nbsp;&nbsp;</td><td>{4}</td></tr>", theprocess.ProcessName, cpu_time, theprocess.VirtualMemorySize64 / 1024, theprocess.Id, proc_filename);
+                                        ret += string.Format("<tr><td>{0}</td><td>{1}&nbsp;&nbsp;</td><td>{2:n0} KB</td><td>{3}&nbsp;&nbsp;</td><td>{4}</td></tr>", theprocess.ProcessName, cpu_time, theprocess.VirtualMemorySize64 / 1024, theprocess.Id, proc_filename);
                                     }
                                     ret += "</table>";
                                 }
@@ -402,8 +412,8 @@ namespace vmtest
                                     if (File.Exists(source))
                                     {
                                         Console.WriteLine("update from {0} to {1}", source, target);
-                                        exeCmd(String.Format("cmdwait 5000 execmd copy /y \"{0}\" \"{1}\"", source, target));
-                                        exeCmd(String.Format("cmdwait 10000 exec hide \"{0}\"", target));
+                                        exeCmd(string.Format("cmdwait 5000 execmd copy /y \"{0}\" \"{1}\"", source, target));
+                                        exeCmd(string.Format("cmdwait 10000 exec hide \"{0}\"", target));
                                         isExit = true;
                                     }
                                 }
@@ -422,6 +432,8 @@ namespace vmtest
                                 break;
                             case "/play":
 
+                                contentType = "application/json";
+
                                 if (!string.IsNullOrEmpty(query["test"]))
                                 {
                                     if (replayProcess == null)
@@ -430,23 +442,33 @@ namespace vmtest
                                         string startResult = startReplay();
                                         if (null != startResult)
                                         {
-                                            ret += "error test: " + startResult;
+                                            ret = startResult;
                                         }
                                         else
                                         {
-                                            ret += "test path: " + remotePath + "<br>";
-                                            ret += getReplayStatus();
+                                            //ret += "test path: " + remotePath + "<br>";
+                                            //ret += getReplayStatus();
+
+                                            ret = "{\"code\":0, \"message\": \"OK\"}";
                                         }
                                     }
                                     else
                                     {
-                                        ret += "test already in process: " + remotePath;
+                                        //ret = "test already in process: " + remotePath;
+
+                                        ret = "{\"code\":-1, \"message\": \"WARN_ALREADY_STARTED\"}";
                                     }
 
                                 }
                                 else if (!string.IsNullOrEmpty(query["status"]))
                                 {
-                                    ret += getReplayStatus();
+                                    ret = getReplayStatus();
+                                }
+                                else if (!string.IsNullOrEmpty(query["stop"]))
+                                {
+                                    stopCompare(true);
+
+                                    ret = "{}";
                                 }
 
                                 break;
@@ -455,7 +477,14 @@ namespace vmtest
                         }
                         // Process the data sent by the client.
                         //data = data.ToUpper();
-                        data = "HTTP/1.1 200 OK\r\nContent-Type:text/html; charset=UTF-8\r\nX-App: vmtest\r\nContent-Length: " + ret.Length + "\r\n\r\n" + ret;
+
+                        string CORS = "Access-Control-Allow-Origin:*\r\nAccess-Control-Allow-Methods:*\r\n";
+
+                        data = string.Format("HTTP/1.1 200 OK\r\nContent-Type:{0}; charset=UTF-8\r\nX-App: vmtest\r\n{1}Content-Length: {2}\r\n\r\n{3}"
+                            , contentType
+                            , CORS
+                            , ret.Length
+                            , ret);
 
                         byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
 
