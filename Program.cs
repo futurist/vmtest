@@ -36,11 +36,11 @@ namespace vmtest
             Application.UseWaitCursor = false;
 
 
-            var httpserver = "mongoose.exe";
+            var httpserver = "mongoose";
 
-            if (File.Exists(httpserver) && Process.GetProcessesByName(httpserver).Length==0 )
+            if (File.Exists(httpserver+".exe") && Process.GetProcessesByName(httpserver).Length==0 )
             {
-                runExe("-listening_port "+ (port+100).ToString() +" -start_browser no", "mongoose.exe", null, null);
+                runExe("-listening_port "+ (port+100).ToString() +" -start_browser no", httpserver+".exe", null, null);
             }
 
             //HotKeyManager.RegisterHotKey(Keys.F12, KeyModifiers.Control);
