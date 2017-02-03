@@ -4,15 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace vmtest
 {
     public class WebServer
     {
+        // from https://codehosting.net/blog/BlogEngine/post/Simple-C-Web-Server
         private readonly HttpListener _listener = new HttpListener();
-        private readonly Func<HttpListenerRequest, string> _responderMethod;
+        private readonly Func<HttpListenerContext, string> _responderMethod;
 
-        public WebServer(string[] prefixes, Func<HttpListenerRequest, string> method)
+        public WebServer(string[] prefixes, Func<HttpListenerContext, string> method)
         {
             if (!HttpListener.IsSupported)
                 throw new NotSupportedException(
@@ -34,7 +36,7 @@ namespace vmtest
             _listener.Start();
         }
 
-        public WebServer(Func<HttpListenerRequest, string> method, params string[] prefixes)
+        public WebServer(Func<HttpListenerContext, string> method, params string[] prefixes)
             : this(prefixes, method) { }
 
         public void Run()
@@ -49,10 +51,11 @@ namespace vmtest
                         ThreadPool.QueueUserWorkItem((c) =>
                         {
                             var ctx = c as HttpListenerContext;
+                            string rstr=null;
                             try
                             {
-                                string rstr = _responderMethod(ctx.Request);
-                                byte[] buf = Encoding.UTF8.GetBytes(rstr);
+                                rstr = _responderMethod(ctx);
+                                byte[] buf = Encoding.UTF8.GetBytes(rstr==null? "" : rstr);
                                 ctx.Response.ContentLength64 = buf.Length;
                                 ctx.Response.OutputStream.Write(buf, 0, buf.Length);
                             }
@@ -61,6 +64,10 @@ namespace vmtest
                             {
                                 // always close the stream
                                 ctx.Response.OutputStream.Close();
+                                if (rstr == null)
+                                {
+                                    Stop();
+                                }
                             }
                         }, _listener.GetContext());
                     }
@@ -71,8 +78,12 @@ namespace vmtest
 
         public void Stop()
         {
-            _listener.Stop();
-            _listener.Close();
+            if (_listener.IsListening)
+            {
+                _listener.Stop();
+                _listener.Close();
+                Application.Exit();
+            }
         }
     }
 }
