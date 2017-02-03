@@ -21,8 +21,9 @@ namespace vmtest
             }
             GC.KeepAlive(mutex);
 
+            new Main();
 
-            new Server();
+            Application.Run(new ApplicationContext());
 
         }
 

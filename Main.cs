@@ -17,15 +17,16 @@ using System.Threading;
 
 namespace vmtest
 {
-    class Server
+    class Main
     {
 
         // Buffer for reading data
         Byte[] bytes = new Byte[2560];
         String data = null;
         bool isExit = false;
+        TcpListener server = null;
 
-        public Server()
+        public Main()
         {
             Application.UseWaitCursor = false;
 
@@ -46,7 +47,41 @@ namespace vmtest
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
 
-            createTCP();
+            WebServer ws = new WebServer(SendResponse, "http://localhost:8080/test/");
+            ws.Run();
+        }
+
+        public string SendResponse(HttpListenerRequest request)
+        {
+            return string.Format("<HTML><BODY>My web page.<br>{0}</BODY></HTML>", DateTime.Now);
+        }
+
+        public void IDLServer()
+        {
+            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+
+            TcpListener listener = new TcpListener(localAddr, port);
+
+            listener.Start();
+
+            // Use the BeginXXXX Pattern to accept clients asynchronously
+            listener.BeginAcceptTcpClient(this.OnAcceptConnection, listener);
+        }
+
+        private void OnAcceptConnection(IAsyncResult asyn)
+        {
+            // Get the listener that handles the client request.
+            TcpListener listener = (TcpListener)asyn.AsyncState;
+
+            // Get the newly connected TcpClient
+            TcpClient client = listener.EndAcceptTcpClient(asyn);
+            Console.WriteLine(2222);
+            // Start the client work
+            Thread proct = new Thread(createNewClient);
+            proct.Start();
+
+            // Issue another connect, only do this if you want to handle multiple clients
+            listener.BeginAcceptTcpClient(this.OnAcceptConnection, listener);
         }
 
 
@@ -570,9 +605,24 @@ namespace vmtest
             Console.WriteLine("client closed");
         }
 
+
+        void createNewClient()
+        {
+            if (isExit) return;
+            try
+            {
+                using (TcpClient client = server.AcceptTcpClient())
+                {
+                    //client.NoDelay = true;
+                    handleClient(client);
+                }
+            }
+            catch (Exception) { }
+        }
+
         void createTCP()
         {
-            TcpListener server = null;
+            server = null;
             try
             {
                 // Set the TcpListener port.
@@ -594,19 +644,7 @@ namespace vmtest
 
                     if (server.Pending())
                     {
-                        Thread clientThread = new Thread(() =>
-                        {
-                            if (isExit) return;
-                            try
-                            {
-                                using (TcpClient client = server.AcceptTcpClient())
-                                {
-                                    //client.NoDelay = true;
-                                    handleClient(client);
-                                }
-                            }
-                            catch (Exception) { }
-                        });
+                        Thread clientThread = new Thread(createNewClient);
                         clientThread.Start();
                     }
 
