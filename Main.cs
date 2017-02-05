@@ -45,7 +45,7 @@ namespace vmtest
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
 
-            ws = new WebServer(handleClient, "http://127.0.0.1:"+port.ToString()+"/");
+            ws = new WebServer(handleClient, "http://*:"+port.ToString()+"/");
             ws.Run();
         }
 

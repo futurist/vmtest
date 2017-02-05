@@ -1,7 +1,7 @@
 var inter1
 
 function host (isHttp) {
-  return ip.value + ':' + (isHttp ? port.value+100 : port.value)
+  return ip.value + ':' + (isHttp ? parseInt(port.value)+100 : port.value)
 }
 
 function getStatus () {
@@ -92,7 +92,7 @@ function getDirList () {
     .then(function (data) {
       dir_list.innerHTML = data.map(function (v) {
         return '<li><span onclick=setTestName(this)>' +
-          v + '</span> <a target=_blank href="' + host(true) + v + '">view</a></li>'
+          v + '</span> <a target=_blank href="' + host(true) + '/' + v + '">view</a></li>'
       }).join('')
     })
 }
