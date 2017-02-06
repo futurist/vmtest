@@ -138,6 +138,7 @@ namespace vmtest
             foreach (var sourceFilePath in Directory.GetFiles(sourcePath, "*.txt"))
             {
                 string fileName = Path.GetFileName(sourceFilePath);
+                if (fileName[0] == '_') continue;
                 string destinationFilePath = Path.Combine(targetPath, fileName);
 
                 System.IO.File.Copy(sourceFilePath, destinationFilePath, true);

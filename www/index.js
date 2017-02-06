@@ -1,7 +1,12 @@
 var inter1
+var urlObj = window.location.href.split('/')
+var protocol = urlObj[0]
+var hostName = urlObj[2].split(':')
+ip.value = hostName[0]
+port.value = hostName[1]-100
 
 function host (isHttp) {
-  return ip.value + ':' + (isHttp ? parseInt(port.value)+100 : port.value)
+  return protocol + '//' + ip.value + ':' + (isHttp ? parseInt(port.value)+100 : port.value)
 }
 
 function getStatus () {
