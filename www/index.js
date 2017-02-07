@@ -128,3 +128,8 @@ function fetchAction (type) {
     }
   }
 }
+
+function refresh() {
+  getStatus()
+  getDirList()
+}
