@@ -30,6 +30,14 @@ namespace vmtest
 
             Application.ApplicationExit += new EventHandler(OnApplicationExit);
 
+
+            if (!File.Exists("convert.exe") || !File.Exists("compare.exe") || !File.Exists("ppp.exe"))
+            {
+                MessageBox.Show("make sure convert.exe, compare.exe, ppp.exe all exists!");
+                return;
+            }
+
+
             var httpserver = "mongoose";
 
             if (File.Exists(httpserver + ".exe") && Process.GetProcessesByName(httpserver).Length == 0)
@@ -50,6 +58,15 @@ namespace vmtest
         }
 
 
+        private static Random random = new Random();
+        private static string RandomString(int Size)
+        {
+            string input = "abcdefghijklmnopqrstuvwxyz0123456789";
+            var chars = Enumerable.Range(0, Size)
+                                   .Select(x => input[random.Next(0, input.Length)]);
+            return new string(chars.ToArray());
+        }
+
         string PathAddBackslash(string path)
         {
             string separator1 = Path.DirectorySeparatorChar.ToString();
@@ -67,7 +84,7 @@ namespace vmtest
 
         void OnApplicationExit(object sender, EventArgs e)
         {
-            ws.Stop();
+            if(ws!=null) ws.Stop();
             stopCompare(false);
         }
 
@@ -191,13 +208,56 @@ namespace vmtest
         {
             Directory.CreateDirectory("compared");
             lastCompareOutput = new StringBuilder();
-            string args = "-metric MAE \"" + remotePath + "data\\" + filename + "\" \"data\\" + filename + "\" \"compared\\" + filename + "\"";
 
+            var tempPath = Path.Combine("data", "_alpha_"+filename);
+            // first ignore alpha area
+            string args = String.Format("\"{0}\" \"{1}\" -compose copy-opacity -composite \"{2}\"", 
+                Path.Combine("data", filename), 
+                Path.Combine(remotePath + "data", filename),
+                tempPath
+                );
+
+            Console.WriteLine(args);
+
+
+            compareProcess = runExe(args, "convert.exe", (sender2, e2) =>
+            {
+                if (!string.IsNullOrEmpty(lastCompareOutput.ToString().Trim()))
+                {
+                    stopCompare(false);
+                    return;
+                }
+
+                // convert ok, then compare
+                compareImageStep2(filename, tempPath);
+            }, lastCompareOutput);
+
+
+        }
+
+        void compareImageStep2(string filename, string tempPath)
+        {
+            lastCompareOutput = new StringBuilder();
+
+            if (!File.Exists(tempPath))
+            {
+                stopCompare(false);
+                MessageBox.Show(tempPath+" does not exists");
+                return;
+            }
+
+            string args = String.Format("-metric MAE \"{0}\" \"{1}\" \"{2}\" ",
+                Path.Combine(remotePath + "data", filename),
+                tempPath,
+                Path.Combine("compared", filename)
+                );
+                
             Console.WriteLine(args);
             log(args);
 
             compareProcess = runExe(args, "compare.exe", (sender2, e2) =>
             {
+                
                 log(lastCompareOutput.ToString());
                 if (!lastCompareOutput.ToString().Contains("0 (0)"))
                 {
