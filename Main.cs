@@ -53,7 +53,7 @@ namespace vmtest
             //HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(MakeSnap);
 
 
-            ws = new WebServer(handleClient, "http://*:"+port.ToString()+"/");
+            ws = new WebServer(handleClient, "http://*:" + port.ToString() + "/");
             ws.Run();
         }
 
@@ -84,7 +84,7 @@ namespace vmtest
 
         void OnApplicationExit(object sender, EventArgs e)
         {
-            if(ws!=null) ws.Stop();
+            if (ws != null) ws.Stop();
             stopCompare(false);
         }
 
@@ -197,6 +197,7 @@ namespace vmtest
             {
                 Console.WriteLine(v);
                 log("compare " + v);
+                if (v[0] == '_') continue;
                 compareImages(v);
                 break;
             }
@@ -209,10 +210,10 @@ namespace vmtest
             Directory.CreateDirectory("compared");
             lastCompareOutput = new StringBuilder();
 
-            var tempPath = Path.Combine("data", "_alpha_"+filename);
+            var tempPath = Path.Combine("data", "_alpha_" + filename);
             // first ignore alpha area
-            string args = String.Format("\"{0}\" \"{1}\" -compose copy-opacity -composite \"{2}\"", 
-                Path.Combine("data", filename), 
+            string args = String.Format("\"{0}\" \"{1}\" -compose copy-opacity -composite \"{2}\"",
+                Path.Combine("data", filename),
                 Path.Combine(remotePath + "data", filename),
                 tempPath
                 );
@@ -222,12 +223,6 @@ namespace vmtest
 
             compareProcess = runExe(args, "convert.exe", (sender2, e2) =>
             {
-                if (!string.IsNullOrEmpty(lastCompareOutput.ToString().Trim()))
-                {
-                    stopCompare(false);
-                    return;
-                }
-
                 // convert ok, then compare
                 compareImageStep2(filename, tempPath);
             }, lastCompareOutput);
@@ -242,7 +237,7 @@ namespace vmtest
             if (!File.Exists(tempPath))
             {
                 stopCompare(false);
-                MessageBox.Show(tempPath+" does not exists");
+                MessageBox.Show(tempPath + " does not exists");
                 return;
             }
 
@@ -251,20 +246,22 @@ namespace vmtest
                 tempPath,
                 Path.Combine("compared", filename)
                 );
-                
+
             Console.WriteLine(args);
             log(args);
 
             compareProcess = runExe(args, "compare.exe", (sender2, e2) =>
             {
-                
-                log(lastCompareOutput.ToString());
-                if (!lastCompareOutput.ToString().Contains("0 (0)"))
+
+                string result = lastCompareOutput.ToString();
+
+                if (!result.Contains("0 (0)"))
                 {
-                    Console.WriteLine(lastCompareOutput.ToString());
-                    log(lastCompareOutput.ToString());
+                    Console.WriteLine(result);
 
                     stopCompare(false);
+
+                    File.WriteAllText(Path.Combine("compared", filename.Substring(0, filename.Length - 4) + "_diff.txt"), result);
 
                     //MessageBox.Show("test error: " + remotePath);
 
@@ -447,7 +444,7 @@ namespace vmtest
 
                     ret = "<form method=\"GET\"><input type=checkbox name=debug value=1><input type=text name=cmd></form>";
 
-                    if (query["debug"]=="1")
+                    if (query["debug"] == "1")
                     {
                         ret += "<pre>" + query["cmd"] + "</pre>";
                     }
