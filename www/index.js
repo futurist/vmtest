@@ -1,7 +1,9 @@
 var inter1
 var prev_running
 var pendingTest
+var isPaused
 var lastStatus
+var lastDirList
 var urlObj = window.location.href.split('/')
 var protocol = urlObj[0]
 var hostName = urlObj[2].split(':')
@@ -14,6 +16,7 @@ function host (isHttp) {
 }
 
 function getStatus () {
+  isPaused = false
   running.innerHTML = ''
   last_code.innerHTML = ''
   fetch(host() + '/play?status=1&folder=' + test_name.value, {
@@ -23,7 +26,7 @@ function getStatus () {
   })
     .then(function (response) {
       clearTimeout(inter1)
-      inter1 = setTimeout(getStatus, 1000)
+      if(!isPaused) inter1 = setTimeout(getStatus, 1000)
       if (response.ok) {
         if (pendingTest) {
           pendingTest = false
@@ -37,7 +40,7 @@ function getStatus () {
     })
     .catch(function () {
       clearTimeout(inter1)
-      inter1 = setTimeout(getStatus, 1000)
+      if(!isPaused) inter1 = setTimeout(getStatus, 1000)
     })
     .then(function (data) {
       lastStatus = data
@@ -55,7 +58,7 @@ function getStatus () {
         if (prev_running) {
           if (data.last_code == 0) {
             // it's success
-            // alert('test success')
+            nextTest()
           } else {
             // it's failed
             alert('test failed!!')
@@ -67,19 +70,51 @@ function getStatus () {
 }
 getStatus()
 
-function nextTest () {
-
+function pauseStatus() {
+  isPaused = true
+  clearTimeout(inter1)
+  inter1 = null
 }
 
-function startPlay (isNow) {
+function nextTest () {
+  // find current test
+  var cur = (lastStatus && lastStatus.remote_path) || test_name.value
+  if(!cur) return
+  var currentID = lastDirList.findIndex(function(v) {
+    return v == cur.replace(/[\\\/]+$/, '')
+  })
+  if(currentID<0) return
+  var next = dir_list.getElementsByClassName('testName')[currentID]
+  if(!next.value) return
+  test_name.value = next.value
+  reboot.checked = next.nextElementSibling.checked
+  pauseStatus()
+  action.innerHTML = 'cancel'
+  action.onclick = function() {
+    clearInterval(inter2)
+    getStatus()
+  }
+  var count = 3
+  var inter2 = setInterval(function() {
+    start_result.innerHTML = count--
+    if(count<0) {
+      clearInterval(inter2)
+      startPlay()
+    }
+  }, 1000)
+}
+
+function startPlay () {
   if (!test_name.value) return alert('select test first')
   if (reboot.checked) {
     pendingTest = true
-    clearTimeout(inter1)
+    pauseStatus()
     inter1 = setTimeout(getStatus, 10000)
     action.disabled = true
+    reboot.checked = false
     sendCmd('exitwin reboot')
   } else {
+    if(isPaused) getStatus()
     _startPlay()
   }
 }
@@ -114,10 +149,11 @@ function getDirList () {
   fetch(host() + '/dir')
     .then(fetchAction('json'))
     .then(function (data) {
+      lastDirList = data
       dir_list.innerHTML = data.map(function (v) {
         return '<li><span onclick=setTestName(this)>' +
           v + '</span> <a target=_blank href="' + host(true) + '/' + v + '">view</a>' +
-          ' <input class=testName title="next test after this success"> <input type=checkbox title="reboot?">' +
+          ' <input class=testName type=search title="next test after this success"> <input type=checkbox title="reboot?">' +
           '</li>'
       }).join('')
     })

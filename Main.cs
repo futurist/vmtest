@@ -139,9 +139,10 @@ namespace vmtest
 
             //ret += "last result:" + (replayExitCode == null ? "NULL" : replayExitCode) + "<br>";
 
-            ret += string.Format("{{\"running\": {0}, \"last_code\": {1} {2} }}"
+            ret += string.Format("{{\"running\": {0}, \"last_code\": {1}, \"remote_path\": \"{2}\" {3} }}"
                 , (replayProcess == null ? "0" : "1")
                 , (replayExitCode == null ? "null" : replayExitCode)
+                , remotePath.Replace('\\', '/')
                 , images);
 
 
