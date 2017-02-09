@@ -4,6 +4,25 @@
   <head>
     <meta charset="utf-8">
     <title>vmtest controller</title>
+    <style>
+      .testName {
+      width: 100px;
+      }
+
+      .popup {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
+      outline: none;
+      }
+
+      .popup.viewer>* {
+      position: absolute;
+      top: 0;
+      left: 0;
+      }
+    </style>
   </head>
 
   <body style="margin:20px;">
@@ -15,11 +34,15 @@
       <button id="exit" onclick="exitServer()">exit</button>
     </div>
     <div style="margin-top:20px;">
-      <div><button id="refresh" onclick="refresh()">refresh</button><button id="refresh" onclick="getShot()">shot</button></div>
+      <div>
+        <button onclick="refresh()">refresh</button>
+        <button onclick="getShot()">shot</button>
+        <button onclick="showViewer()">compare</button>
+      </div>
       <div>running: <span id="running"></span></div>
       <div>last_code: <span id="last_code"></span></div>
       <div style="margin-top:20px">
-        <input id="test_name" type="search" style="width: 100px">
+        <input id="test_name" type="search" class="testName">
         <button id="action">start</button>
         <label>reboot?<input type="checkbox" id="reboot"></label>
         <span id="start_result"></span>
@@ -27,7 +50,8 @@
       <ul id="dir_list">
       </ul>
     </div>
-    <div style="position:absolute;top:0;left:0;display:none;" id="shot" onclick="this.style.display='none';"></div>
+    <div class="popup viewer" id="shot" onclick="this.style.display='none';"></div>
+    <div class="popup viewer" id="viewer" onclick="" tabindex="1"></div>
     <script type="text/javascript" src="index.js"></script>
   </body>
 

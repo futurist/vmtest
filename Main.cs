@@ -97,6 +97,7 @@ namespace vmtest
         bool DEBUG = false;
         Int32 port = 22300;
         string remotePath = null;
+        string currentImage = null;
         Process compareProcess = null;
         Process replayProcess = null;
         IEnumerable<string> remoteFiles = null;
@@ -107,17 +108,42 @@ namespace vmtest
 
         string replayExitCode = null;
 
-        string getReplayStatus()
+        string getReplayStatus(string remotePath)
         {
             string ret = "";
+            string images = "";
+
+            if (!string.IsNullOrEmpty(remotePath))
+            {
+                remotePath = Path.Combine(remotePath, " ").TrimEnd();
+
+                getFolderImageFiles(remotePath);
+
+                if (compareFiles != null && compareFiles.Count() > 0)
+                {
+                    string current = compareFiles.Last();
+                    string compareImage = Path.Combine("compared", current);
+                    string testImage = Path.Combine(remotePath + "data", current);
+                    string dataImage = Path.Combine("data", "_alpha_" + current);
+
+                    images = String.Format(", \"images\": [\"{0}\", \"{1}\", \"{2}\"]",
+                        testImage.Replace('\\', '/'),
+                        dataImage.Replace('\\', '/'),
+                        compareImage.Replace('\\', '/'));
+
+                }
+            }
+
 
             //ret += "running status:" + (replayProcess == null ? "0" : "1") + "<br>";
 
             //ret += "last result:" + (replayExitCode == null ? "NULL" : replayExitCode) + "<br>";
 
-            ret += string.Format("{{\"running\": {0}, \"last_code\": {1}}}"
+            ret += string.Format("{{\"running\": {0}, \"last_code\": {1} {2} }}"
                 , (replayProcess == null ? "0" : "1")
-                , (replayExitCode == null ? "null" : replayExitCode));
+                , (replayExitCode == null ? "null" : replayExitCode)
+                , images);
+
 
             return ret;
         }
@@ -181,13 +207,23 @@ namespace vmtest
 
         }
 
+        void getFolderImageFiles(string remotePath)
+        {
+            if (string.IsNullOrEmpty(remotePath)) return;
+            try
+            {
+                remoteFiles = new System.IO.DirectoryInfo(remotePath + "data\\").GetFiles("*.png").Select(fi => fi.Name);
+                localFiles = new System.IO.DirectoryInfo("data\\").GetFiles("*.png").Select(fi => fi.Name);
+                compareFiles = new System.IO.DirectoryInfo("compared\\").GetFiles("*.png").Select(fi => fi.Name);
+            }
+            catch (Exception) { }
+        }
+
         void compareFolder()
         {
             if (remotePath == null) return;
 
-            remoteFiles = new System.IO.DirectoryInfo(remotePath + "data\\").GetFiles("*.png").Select(fi => fi.Name);
-            localFiles = new System.IO.DirectoryInfo("data\\").GetFiles("*.png").Select(fi => fi.Name);
-            compareFiles = new System.IO.DirectoryInfo("compared\\").GetFiles("*.png").Select(fi => fi.Name);
+            getFolderImageFiles(remotePath);
 
             IEnumerable<string> list3 = localFiles.Except(compareFiles).OrderBy(v => v);
 
@@ -207,6 +243,7 @@ namespace vmtest
 
         void compareImages(string filename)
         {
+            currentImage = filename;
             Directory.CreateDirectory("compared");
             lastCompareOutput = new StringBuilder();
 
@@ -261,7 +298,7 @@ namespace vmtest
 
                     stopCompare(false);
 
-                    File.WriteAllText(Path.Combine("compared", filename.Substring(0, filename.Length - 4) + "_diff.txt"), result);
+                    File.WriteAllText(Path.Combine("compared", filename.Substring(0, filename.Length - 4) + "_diff.txt"), lastCompareOutput.ToString());
 
                     //MessageBox.Show("test error: " + remotePath);
 
@@ -552,7 +589,7 @@ namespace vmtest
                     }
                     else if (!string.IsNullOrEmpty(query["status"]))
                     {
-                        ret = getReplayStatus();
+                        ret = getReplayStatus(query["folder"]);
                     }
                     else if (!string.IsNullOrEmpty(query["stop"]))
                     {
