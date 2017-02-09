@@ -145,7 +145,7 @@ function showViewer () {
   if (!lastStatus || !lastStatus.images) return
   var html = ''
   html = lastStatus.images.map(function (v) {
-    return '<img class="image" onmousedown=\'nextImage(this)\' data-path="'+v+'" src="../' + v + '?' + Math.random() + '">'
+    return '<img class="image" style="background-color:red;" onmousedown=\'nextImage(this)\' data-path="'+v+'" src="../' + v + '?' + Math.random() + '">'
   }).join('')
 
   html += '<div style="z-index:99999999; width:500px;" onclick="this.parentNode.style.display=\'none\'"> X <span id=imageHint></span></div>'
